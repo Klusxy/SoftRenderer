@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# vs2017
+*.db
+*.vs
+x64
+Debug
