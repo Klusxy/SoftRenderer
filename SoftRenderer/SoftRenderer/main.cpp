@@ -10,6 +10,9 @@
 #include "Shader.h"
 #include "tgaimage.h"
 
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
 
 //const
 const int g_WindowWidth = 600;
@@ -25,6 +28,7 @@ GLuint g_SoftRendererFrameBufferTex = 0;
 const TGAColor COLOR_RED = TGAColor(255, 0, 0, 255);
 const TGAColor COLOR_WHITE = TGAColor(255, 255, 255, 255);
 TGAImage *g_Image = 0;
+const aiScene *g_Scene = 0;
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void process_input(GLFWwindow *window);
@@ -57,7 +61,15 @@ int main()
 	createSoftRendererTexture();
 
 	// soft renderer
-	g_Image = new TGAImage(g_WindowWidth, g_WindowHeight, TGAImage::RGBA, true);
+	g_Image = new TGAImage(g_WindowWidth, g_WindowHeight, TGAImage::RGBA);
+
+	Assimp::Importer import;
+	g_Scene = import.ReadFile("african_head.obj", aiProcess_Triangulate | aiProcess_FlipUVs);
+	if (!g_Scene || g_Scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !g_Scene->mRootNode)
+	{
+		std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+		return 0;
+	}
 
 	while (!glfwWindowShouldClose(g_Window))
 	{
@@ -110,7 +122,7 @@ bool initWindow()
 		return false;
 	}
 	glfwMakeContextCurrent(g_Window);
-	glfwSwapInterval(1);
+	glfwSwapInterval(0);
 
 	//registe callback
 	glfwSetFramebufferSizeCallback(g_Window, framebuffer_size_callback);
@@ -170,8 +182,8 @@ void createSoftRendererTexture()
 {
 	glGenTextures(1, &g_SoftRendererFrameBufferTex);
 	glBindTexture(GL_TEXTURE_2D, g_SoftRendererFrameBufferTex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -237,7 +249,8 @@ void drawLineWithBresenham(int x0, int y0, int x1, int y1, TGAImage *image, TGAC
 void softRenderer()
 {
 	// step4: 400 * 5 = 2000, 20fps
-	//for (int i = 0; i < 400; i++)
+/*
+	for (int i = 0; i < 400; i++)
 	{
 		// k < 0
 		drawLineWithBresenham(0, 0, 600 - 1, 600 - 1, g_Image, COLOR_RED);// k = -1
@@ -248,7 +261,32 @@ void softRenderer()
 		drawLineWithBresenham(600 - 1, 0, 0, 600 - 1, g_Image, COLOR_WHITE);// 交换顶点，从右到左
 		// 0 < k < 0.5
 		drawLineWithBresenham(0, 600 - 1, 600 - 1, 360 - 1, g_Image, COLOR_RED);// 不陡峭 k = 0.4
+	}*/
+	
+	for (int i = 0; i < g_Scene->mNumMeshes; i++)
+	{
+		aiMesh *mesh = g_Scene->mMeshes[i];
+		for (int j = 0; j < mesh->mNumFaces; j++)
+		{
+			aiFace face = mesh->mFaces[j];
+			for (int k = 0; k < face.mNumIndices; k++)
+			{
+				unsigned int index0 = face.mIndices[k];
+				unsigned int index1 = face.mIndices[(k + 1) % face.mNumIndices];
+
+				aiVector3D v0 = mesh->mVertices[index0];
+				aiVector3D v1 = mesh->mVertices[index1];
+
+				int x0 = (v0.x + 1.0)*g_WindowWidth / 2.0;
+				int y0 = (-v0.y + 1.0)*g_WindowHeight / 2.0;
+				int x1 = (v1.x + 1.0)*g_WindowWidth / 2.0;
+				int y1 = (-v1.y + 1.0)*g_WindowHeight / 2.0;
+				drawLineWithBresenham(x0, y0, x1, y1, g_Image, COLOR_WHITE);
+			}
+		}
 	}
+
+	//g_Image->write_tga_file("output.tga");
 
 	glBindTexture(GL_TEXTURE_2D, g_SoftRendererFrameBufferTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_WindowWidth, g_WindowHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, g_Image->buffer());

@@ -10,5 +10,5 @@ uniform mat4 projection;
 void main()
 {
 	gl_Position = projection * view * model * vec4(iPos.x, iPos.y, -1, 1.0f);
-	uv = iTex;
+	uv = vec2(iTex.x, 1.0f - iTex.y);
 }
