@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="tgaimage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Quad.fs" />
@@ -28,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="tgaimage.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8970C470-B46C-4B1B-B412-769197455F35}</ProjectGuid>

@@ -10,4 +10,5 @@ vec4 GaussianBlur();
 void main()
 {
 	FragColor = texture(tex, uv);
+	//FragColor = vec4(1,0,0,1);;
 }

@@ -5,6 +5,7 @@
     <ClCompile Include="glad.c">
       <Filter>glad</Filter>
     </ClCompile>
+    <ClCompile Include="tgaimage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Quad.vs">
@@ -27,6 +28,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="tgaimage.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
