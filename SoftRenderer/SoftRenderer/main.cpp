@@ -14,6 +14,17 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
+struct Vec2i
+{
+	Vec2i(int _x, int _y)
+	{
+		x = _x;
+		y = _y;
+	}
+	int x;
+	int y;
+};
+
 //const
 const int g_WindowWidth = 600;
 const int g_WindowHeight = 600;
@@ -26,6 +37,8 @@ GLuint g_QuadVbo = 0;
 GLuint g_SoftRendererFrameBufferTex = 0;
 
 const TGAColor COLOR_RED = TGAColor(255, 0, 0, 255);
+const TGAColor COLOR_GREEN = TGAColor(0, 255, 0, 255);
+const TGAColor COLOR_BLUE = TGAColor(0, 0, 255, 255);
 const TGAColor COLOR_WHITE = TGAColor(255, 255, 255, 255);
 TGAImage *g_Image = 0;
 const aiScene *g_Scene = 0;
@@ -43,8 +56,10 @@ void createSoftRendererTexture();
 void softRenderer();
 // ------------------------------------------------------------
 // 填充三角形的软光栅算法
+void fillTriangle(Vec2i v0, Vec2i v1, Vec2i v2, TGAImage *image, TGAColor color);
 // Digital Differential Analyzer/Bresenham
 void drawLineWithBresenham(int x0, int y0, int x1, int y1, TGAImage *image, TGAColor color);
+void drawLineWithBresenham(Vec2i v0, Vec2i v1, TGAImage *image, TGAColor color);
 void draw_scene(GLFWwindow *window);
 
 void releaseResource();
@@ -189,6 +204,43 @@ void createSoftRendererTexture()
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void drawLineWithBresenham(Vec2i v0, Vec2i v1, TGAImage *image, TGAColor color)
+{
+	bool steep = false;
+	if (std::abs(v0.x - v1.x) < std::abs(v0.y - v1.y))
+	{
+		std::swap(v0.x, v0.y);
+		std::swap(v1.x, v1.y);
+		steep = true;
+	}
+
+	if (v0.x > v1.x)
+		std::swap(v0, v1);
+
+	int dx = v1.x - v0.x;
+	int dy = v1.y - v0.y;
+
+	float k = std::abs((float)dy / float(dx));
+	float distance_y = 0;
+	int y = v0.y;
+
+	for (int x = v0.x; x < v1.x; x++)
+	{
+		if (steep)
+			image->set(y, x, color);
+		else
+			image->set(x, y, color);
+
+		distance_y += k;
+
+		if (distance_y > 0.5)
+		{
+			y += (v1.y > v0.y ? 1 : -1);
+			distance_y -= 1.0;
+		}
+	}
+}
+
 void drawLineWithBresenham(int x0, int y0, int x1, int y1, TGAImage *image, TGAColor color)
 {
 	// bresenham思路:
@@ -246,6 +298,19 @@ void drawLineWithBresenham(int x0, int y0, int x1, int y1, TGAImage *image, TGAC
 	}
 }
 
+void fillTriangle(Vec2i v0, Vec2i v1, Vec2i v2, TGAImage *image, TGAColor color)
+{
+	if (v0.y > v1.y)
+		std::swap(v0, v1);
+	if (v1.y > v2.y)
+		std::swap(v1, v2);
+	if (v0.y > v1.y)
+		std::swap(v0, v1);
+	drawLineWithBresenham(v0, v1, image, COLOR_GREEN);
+	drawLineWithBresenham(v1, v2, image, COLOR_GREEN);
+	drawLineWithBresenham(v2, v0, image, COLOR_RED);
+}
+
 void softRenderer()
 {
 	// step4: 400 * 5 = 2000, 20fps
@@ -263,7 +328,7 @@ void softRenderer()
 		drawLineWithBresenham(0, 600 - 1, 600 - 1, 360 - 1, g_Image, COLOR_RED);// 不陡峭 k = 0.4
 	}*/
 	
-	for (int i = 0; i < g_Scene->mNumMeshes; i++)
+	/*for (int i = 0; i < g_Scene->mNumMeshes; i++)
 	{
 		aiMesh *mesh = g_Scene->mMeshes[i];
 		for (int j = 0; j < mesh->mNumFaces; j++)
@@ -284,7 +349,15 @@ void softRenderer()
 				drawLineWithBresenham(x0, y0, x1, y1, g_Image, COLOR_WHITE);
 			}
 		}
-	}
+	}*/
+
+	Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
+	Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
+	Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
+
+	fillTriangle(t0[0], t0[1], t0[2], g_Image, COLOR_RED);
+	fillTriangle(t1[0], t1[1], t1[2], g_Image, COLOR_GREEN);
+	fillTriangle(t2[0], t2[1], t2[2], g_Image, COLOR_BLUE);
 
 	//g_Image->write_tga_file("output.tga");
 
